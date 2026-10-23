@@ -1,6 +1,7 @@
 package org.example.storage;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -64,6 +65,27 @@ public class TransactionFileStorage {
         log.info("Loaded {} transactions from {} ({} broken lines skipped)",
                 transactions.size(), file, skipped);
         return transactions;
+    }
+
+    /**
+     * Writes all transactions to the file. The old content is replaced.
+     */
+    public void save(Path file, List<Transaction> transactions) throws IOException {
+        Path parent = file.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+
+        try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            writer.write(HEADER);
+            writer.newLine();
+            for (Transaction transaction : transactions) {
+                writer.write(toCsvLine(transaction));
+                writer.newLine();
+            }
+        }
+
+        log.info("Saved {} transactions to {}", transactions.size(), file);
     }
 
     private void createEmptyFile(Path file) throws IOException {
