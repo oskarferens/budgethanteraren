@@ -1,6 +1,14 @@
+/**
+ * Business logic for the budget. Add transactions and calculating totals.
+ * Knows nothing about the console or files, which makes it easy to test.
+ */
+
+
 package org.example.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +58,7 @@ public class BudgetService {
     }
 
     /**
-     * Sum per category -Hyra = -8000.00, Lön = 25000.00, Mat =  -450.50-.
+     * Sum per category -Hyra = -8000.00, Lön = 25000.00, Mat = -450.50-.
      * Income is positive and expenses are negative. TreeMap keeps the categories sorted A-Z.
      */
     public Map<String, BigDecimal> getSumPerCategory() {
@@ -59,6 +67,34 @@ public class BudgetService {
                         Transaction::category,
                         TreeMap::new,
                         Collectors.reducing(ZERO, Transaction::signedAmount, BigDecimal::add)));
+    }
+
+    /** All transactions sorted by date, oldest first. */
+    public List<Transaction> getAllSortedByDate() {
+        return sortByDate(repository.findAll());
+    }
+
+    /** Only income or only expenses, sorted by date. */
+    public List<Transaction> filterByType(TransactionType type) {
+        Objects.requireNonNull(type, "type must not be null");
+        return sortByDate(repository.findWhere(t -> t.type() == type));
+    }
+
+    /** Transactions between two dates, both dates included, sorted by date. */
+    public List<Transaction> filterByDateRange(LocalDate from, LocalDate to) {
+        Objects.requireNonNull(from, "from must not be null");
+        Objects.requireNonNull(to, "to must not be null");
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("Startdatum kan inte vara efter slutdatum.");
+        }
+        return sortByDate(repository.findWhere(
+                t -> !t.date().isBefore(from) && !t.date().isAfter(to)));
+    }
+
+    private List<Transaction> sortByDate(List<Transaction> transactions) {
+        return transactions.stream()
+                .sorted(Comparator.comparing(Transaction::date))
+                .toList();
     }
 
     private BigDecimal sumOf(List<Transaction> transactions) {
