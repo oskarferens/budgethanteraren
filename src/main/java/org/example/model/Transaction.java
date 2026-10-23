@@ -3,6 +3,7 @@ package org.example.model;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Locale;
 
 import org.example.exception.InvalidTransactionException;
 
@@ -29,8 +30,18 @@ public record Transaction(LocalDate date, String category, BigDecimal amount, Tr
         if (amount.stripTrailingZeros().scale() > 2) {
             throw new InvalidTransactionException("Beloppet får ha högst två decimaler.");
         }
-        category = category.trim();
+        category = normalizeCategory(category);
         amount = amount.setScale(2, RoundingMode.UNNECESSARY); // 100 -> 100.00
+    }
+
+    /**
+     * "mat", "MAT" and " Mat " all become "Mat", so the same category
+     * is always grouped together in the summary.
+     */
+    private static String normalizeCategory(String category) {
+        String trimmed = category.trim();
+        return trimmed.substring(0, 1).toUpperCase(Locale.ROOT)
+                + trimmed.substring(1).toLowerCase(Locale.ROOT);
     }
 
     /** Positive for income, negative for expense. */

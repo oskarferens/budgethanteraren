@@ -43,8 +43,10 @@ public class ConsoleMenu {
             printMenu();
             String choice = readLine("Välj: ");
             if (choice == null) {
+                log.info("Input ended, leaving the menu");
                 break; // no more input (e.g. Ctrl+D)
             }
+            log.debug("Menu choice: {}", choice);
             try {
                 switch (choice.toLowerCase()) {
                     case "1" -> addTransaction();
@@ -53,7 +55,10 @@ public class ConsoleMenu {
                     case "4" -> filterTransactions();
                     case "5" -> saveToFile();
                     case "e" -> running = false;
-                    default -> System.out.println("Ogiltigt val: \"" + choice + "\". Försök igen.");
+                    default -> {
+                        log.warn("Invalid menu choice: {}", choice);
+                        System.out.println("Ogiltigt val: \"" + choice + "\". Försök igen.");
+                    }
                 }
             } catch (InvalidTransactionException | IllegalArgumentException | IllegalStateException e) {
                 log.warn("Invalid input: {}", e.getMessage());
@@ -82,6 +87,7 @@ public class ConsoleMenu {
 
         Transaction transaction = new Transaction(date, category, amount, type);
         service.addTransaction(transaction);
+        log.info("User added transaction: {}", transaction);
         System.out.println("Transaktionen lades till: " + format(transaction));
     }
 
@@ -109,6 +115,7 @@ public class ConsoleMenu {
         System.out.println("2. Endast utgifter");
         System.out.println("3. Datumintervall");
         String choice = readRequired("Välj filter: ");
+        log.debug("Filter choice: {}", choice);
         switch (choice) {
             case "1" -> printTransactions(service.filterByType(TransactionType.INCOME));
             case "2" -> printTransactions(service.filterByType(TransactionType.EXPENSE));
@@ -117,7 +124,10 @@ public class ConsoleMenu {
                 LocalDate to = readDate("Till datum (ÅÅÅÅ-MM-DD, tom rad = idag): ");
                 printTransactions(service.filterByDateRange(from, to));
             }
-            default -> System.out.println("Ogiltigt filter: \"" + choice + "\".");
+            default -> {
+                log.warn("Invalid filter choice: {}", choice);
+                System.out.println("Ogiltigt filter: \"" + choice + "\".");
+            }
         }
     }
 
@@ -153,6 +163,7 @@ public class ConsoleMenu {
     private String formatAmount(BigDecimal amount) {
         return (amount.signum() > 0 ? "+" : "") + amount.toPlainString();
     }
+
     //Safe input
     /** Returns the trimmed line, or null if there is no more input. */
     private String readLine(String prompt) {
@@ -177,7 +188,10 @@ public class ConsoleMenu {
             switch (input) {
                 case "1" -> { return TransactionType.INCOME; }
                 case "2" -> { return TransactionType.EXPENSE; }
-                default -> System.out.println("Skriv 1 eller 2.");
+                default -> {
+                    log.warn("Invalid transaction type input: {}", input);
+                    System.out.println("Skriv 1 eller 2.");
+                }
             }
         }
     }
@@ -191,6 +205,7 @@ public class ConsoleMenu {
             try {
                 return LocalDate.parse(input);
             } catch (DateTimeParseException e) {
+                log.warn("Invalid date input: {}", input);
                 System.out.println("\"" + input + "\" är inget giltigt datum. Exempel: 2026-03-15");
             }
         }
@@ -200,9 +215,11 @@ public class ConsoleMenu {
         while (true) {
             String input = readRequired("Kategori: ");
             if (input.isEmpty()) {
+                log.warn("Empty category input");
                 System.out.println("Kategorin får inte vara tom.");
             } else if (input.contains(";")) {
                 // Semicolon is the separator in the CSV file.
+                log.warn("Category with semicolon rejected: {}", input);
                 System.out.println("Kategorin får inte innehålla semikolon (;).");
             } else {
                 return input;
@@ -217,6 +234,7 @@ public class ConsoleMenu {
                 // Accept both Swedish decimal comma and decimal point.
                 return new BigDecimal(input.replace(',', '.'));
             } catch (NumberFormatException e) {
+                log.warn("Invalid amount input: {}", input);
                 System.out.println("\"" + input + "\" är inget giltigt belopp.");
             }
         }

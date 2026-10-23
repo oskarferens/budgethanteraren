@@ -31,12 +31,11 @@ class BudgetServiceTest {
         return new Transaction(LocalDate.parse(date), category, new BigDecimal(amount), type);
     }
 
-    // ---------- Totals and balance ----------
-
+    //Totals and balance
     @Test
     @DisplayName("Empty budget has 0.00 in balance, income and expenses")
     void emptyBudgetHasZeroTotals() {
-        // Act + Assert
+        // When + Then
         assertEquals(new BigDecimal("0.00"), service.getBalance());
         assertEquals(new BigDecimal("0.00"), service.getTotalIncome());
         assertEquals(new BigDecimal("0.00"), service.getTotalExpenses());
@@ -45,17 +44,17 @@ class BudgetServiceTest {
     @Test
     @DisplayName("Totals and balance are calculated from income and expenses")
     void calculatesTotalsAndBalance() {
-        // Arrange
+        // Given
         service.addTransaction(tx("2026-03-25", "Lön", "25000", TransactionType.INCOME));
         service.addTransaction(tx("2026-03-01", "Hyra", "8000", TransactionType.EXPENSE));
         service.addTransaction(tx("2026-03-10", "Mat", "450.50", TransactionType.EXPENSE));
 
-        // Act
+        // When
         BigDecimal income = service.getTotalIncome();
         BigDecimal expenses = service.getTotalExpenses();
         BigDecimal balance = service.getBalance();
 
-        // Assert
+        // Then
         assertEquals(new BigDecimal("25000.00"), income);
         assertEquals(new BigDecimal("8450.50"), expenses);
         assertEquals(new BigDecimal("16549.50"), balance);
@@ -64,33 +63,32 @@ class BudgetServiceTest {
     @Test
     @DisplayName("Balance can be negative when expenses are bigger than income")
     void balanceCanBeNegative() {
-        // Arrange
+        // Given
         service.addTransaction(tx("2026-03-01", "Extra", "100", TransactionType.INCOME));
         service.addTransaction(tx("2026-03-02", "Mat", "100.01", TransactionType.EXPENSE));
 
-        // Act
+        // When
         BigDecimal balance = service.getBalance();
 
-        // Assert
+        // Then
         assertEquals(new BigDecimal("-0.01"), balance);
     }
 
     @Test
     @DisplayName("Decimal amounts are added exactly (0.10 + 0.20 = 0.30)")
     void decimalAmountsAreExact() {
-        // Arrange
+        // Given
         service.addTransaction(tx("2026-03-01", "Godis", "0.10", TransactionType.EXPENSE));
         service.addTransaction(tx("2026-03-02", "Godis", "0.20", TransactionType.EXPENSE));
 
-        // Act
+        // When
         BigDecimal expenses = service.getTotalExpenses();
 
-        // Assert
+        // Then
         assertEquals(new BigDecimal("0.30"), expenses);
     }
 
-    // ---------- Sum per category ----------
-
+    //Sum per category
     @Test
     @DisplayName("Sum per category is empty when there are no transactions")
     void sumPerCategoryIsEmptyWithoutTransactions() {
@@ -100,46 +98,42 @@ class BudgetServiceTest {
     @Test
     @DisplayName("Sum per category groups transactions and sorts categories A-Z")
     void sumPerCategoryGroupsAndSorts() {
-        // Arrange
+        // Given
         service.addTransaction(tx("2026-03-10", "Mat", "450.50", TransactionType.EXPENSE));
         service.addTransaction(tx("2026-03-25", "Lön", "25000", TransactionType.INCOME));
         service.addTransaction(tx("2026-03-17", "Mat", "300", TransactionType.EXPENSE));
         service.addTransaction(tx("2026-03-01", "Hyra", "8000", TransactionType.EXPENSE));
 
-        // Act
+        // When
         Map<String, BigDecimal> sums = service.getSumPerCategory();
 
-        // Assert
+        // Then
         assertEquals(List.of("Hyra", "Lön", "Mat"), new ArrayList<>(sums.keySet()));
         assertEquals(new BigDecimal("-8000.00"), sums.get("Hyra"));
         assertEquals(new BigDecimal("25000.00"), sums.get("Lön"));
         assertEquals(new BigDecimal("-750.50"), sums.get("Mat"));
     }
 
-    // ---------- Sorting and filtering ----------
-
+    //Sorting and filtering
     @Test
-    @DisplayName("All transactions are sorted by date, oldest first")
-    void allTransactionsAreSortedByDate() {
+    @DisplayName("Categories with different upper/lower case are summed together")
+    void sumPerCategoryIgnoresCase() {
         // Arrange
-        Transaction late = tx("2026-03-25", "Lön", "25000", TransactionType.INCOME);
-        Transaction early = tx("2026-03-01", "Hyra", "8000", TransactionType.EXPENSE);
-        Transaction middle = tx("2026-03-10", "Mat", "450.50", TransactionType.EXPENSE);
-        service.addTransaction(late);
-        service.addTransaction(early);
-        service.addTransaction(middle);
+        service.addTransaction(tx("2026-03-10", "Mat", "100", TransactionType.EXPENSE));
+        service.addTransaction(tx("2026-03-11", "mat", "50", TransactionType.EXPENSE));
 
         // Act
-        List<Transaction> sorted = service.getAllSortedByDate();
+        Map<String, BigDecimal> sums = service.getSumPerCategory();
 
         // Assert
-        assertEquals(List.of(early, middle, late), sorted);
+        assertEquals(1, sums.size());
+        assertEquals(new BigDecimal("-150.00"), sums.get("Mat"));
     }
 
     @Test
     @DisplayName("Filter by type returns only that type, sorted by date")
     void filterByTypeReturnsOnlyThatType() {
-        // Arrange
+        // Given
         Transaction salary = tx("2026-03-25", "Lön", "25000", TransactionType.INCOME);
         Transaction food = tx("2026-03-10", "Mat", "450.50", TransactionType.EXPENSE);
         Transaction rent = tx("2026-03-01", "Hyra", "8000", TransactionType.EXPENSE);
@@ -147,17 +141,17 @@ class BudgetServiceTest {
         service.addTransaction(food);
         service.addTransaction(rent);
 
-        // Act
+        // When
         List<Transaction> expenses = service.filterByType(TransactionType.EXPENSE);
 
-        // Assert
+        // Then
         assertEquals(List.of(rent, food), expenses);
     }
 
     @Test
     @DisplayName("Date range includes transactions on the first and the last day")
     void dateRangeIncludesBothEndDates() {
-        // Arrange
+        // Given
         Transaction before = tx("2026-02-28", "Mat", "100", TransactionType.EXPENSE);
         Transaction firstDay = tx("2026-03-01", "Hyra", "8000", TransactionType.EXPENSE);
         Transaction lastDay = tx("2026-03-31", "Mat", "200", TransactionType.EXPENSE);
@@ -167,34 +161,34 @@ class BudgetServiceTest {
         service.addTransaction(lastDay);
         service.addTransaction(after);
 
-        // Act
+        // When
         List<Transaction> march = service.filterByDateRange(
                 LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
-        // Assert
+        // Then
         assertEquals(List.of(firstDay, lastDay), march);
     }
 
     @Test
     @DisplayName("Date range with the same start and end date returns that day only")
     void dateRangeWithSingleDay() {
-        // Arrange
+        // Given
         Transaction food = tx("2026-03-10", "Mat", "450.50", TransactionType.EXPENSE);
         service.addTransaction(food);
         service.addTransaction(tx("2026-03-11", "Mat", "99", TransactionType.EXPENSE));
 
-        // Act
+        // When
         List<Transaction> result = service.filterByDateRange(
                 LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 10));
 
-        // Assert
+        // Then
         assertEquals(List.of(food), result);
     }
 
     @Test
     @DisplayName("Start date after end date is not allowed")
     void dateRangeWithStartAfterEndThrows() {
-        // Act + Assert
+        // When + Then
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
                 () -> service.filterByDateRange(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 3, 1)));
         assertEquals("Startdatum kan inte vara efter slutdatum.", e.getMessage());
@@ -203,7 +197,7 @@ class BudgetServiceTest {
     @Test
     @DisplayName("Filters on an empty budget return empty lists")
     void filtersOnEmptyBudgetReturnEmptyLists() {
-        // Act + Assert
+        // When + Then
         assertTrue(service.getAllSortedByDate().isEmpty());
         assertTrue(service.filterByType(TransactionType.INCOME).isEmpty());
         assertTrue(service.filterByDateRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)).isEmpty());

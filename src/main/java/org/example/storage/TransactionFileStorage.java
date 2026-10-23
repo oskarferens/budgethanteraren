@@ -42,6 +42,7 @@ public class TransactionFileStorage {
             return new ArrayList<>();
         }
 
+        log.debug("Reading transactions from {}", file.toAbsolutePath());
         List<Transaction> transactions = new ArrayList<>();
         int skipped = 0;
 
@@ -54,7 +55,9 @@ public class TransactionFileStorage {
                     continue;
                 }
                 try {
-                    transactions.add(parseLine(line, lineNumber));
+                    Transaction transaction = parseLine(line, lineNumber);
+                    transactions.add(transaction);
+                    log.debug("Line {} parsed: {}", lineNumber, transaction);
                 } catch (FileFormatException e) {
                     skipped++;
                     log.warn("Skipping broken line in {}: {}", file, e.getMessage());
@@ -76,6 +79,7 @@ public class TransactionFileStorage {
             Files.createDirectories(parent);
         }
 
+        log.debug("Writing {} transactions to {}", transactions.size(), file.toAbsolutePath());
         try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
             writer.write(HEADER);
             writer.newLine();
