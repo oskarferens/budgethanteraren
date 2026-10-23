@@ -3,6 +3,8 @@ package org.example.ui;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import org.example.exception.InvalidTransactionException;
@@ -39,6 +41,9 @@ public class ConsoleMenu {
             try {
                 switch (choice.toLowerCase()) {
                     case "1" -> addTransaction();
+                    case "2" -> showAllTransactions();
+                    case "3" -> showSummary();
+                    case "4" -> filterTransactions();
                     case "e" -> running = false;
                     default -> System.out.println("Ogiltigt val: \"" + choice + "\". Försök igen.");
                 }
@@ -54,13 +59,16 @@ public class ConsoleMenu {
         System.out.println();
         System.out.println("-----Budgethanteraren-----");
         System.out.println("1. Lägg till transaktion");
+        System.out.println("2. Visa alla transaktioner");
+        System.out.println("3. Visa saldo och sammanställning per kategori");
+        System.out.println("4. Filtrera transaktioner");
         System.out.println("e. Avsluta");
     }
 
     //Menu actions
     private void addTransaction() {
         TransactionType type = readType();
-        LocalDate date = readDate();
+        LocalDate date = readDate("Datum (ÅÅÅÅ-MM-DD, tom rad = idag): ");
         String category = readCategory();
         BigDecimal amount = readAmount();
 
@@ -69,10 +77,57 @@ public class ConsoleMenu {
         System.out.println("Transaktionen lades till: " + format(transaction));
     }
 
+    private void showAllTransactions() {
+        printTransactions(service.getAllSortedByDate());
+    }
+
+    private void showSummary() {
+        if (service.getAllTransactions().isEmpty()) {
+            System.out.println("Inga transaktioner ännu.");
+            return;
+        }
+        System.out.println("Inkomster totalt: " + formatAmount(service.getTotalIncome()) + " kr");
+        System.out.println("Utgifter totalt:  " + formatAmount(service.getTotalExpenses().negate()) + " kr");
+        System.out.println("Saldo:            " + formatAmount(service.getBalance()) + " kr");
+        System.out.println();
+        System.out.println("Per kategori:");
+        for (Map.Entry<String, BigDecimal> entry : service.getSumPerCategory().entrySet()) {
+            System.out.printf("  %-15s %12s kr%n", entry.getKey(), formatAmount(entry.getValue()));
+        }
+    }
+
+    private void filterTransactions() {
+        System.out.println("1. Endast inkomster");
+        System.out.println("2. Endast utgifter");
+        System.out.println("3. Datumintervall");
+        String choice = readRequired("Välj filter: ");
+        switch (choice) {
+            case "1" -> printTransactions(service.filterByType(TransactionType.INCOME));
+            case "2" -> printTransactions(service.filterByType(TransactionType.EXPENSE));
+            case "3" -> {
+                LocalDate from = readDate("Från datum (ÅÅÅÅ-MM-DD, tom rad = idag): ");
+                LocalDate to = readDate("Till datum (ÅÅÅÅ-MM-DD, tom rad = idag): ");
+                printTransactions(service.filterByDateRange(from, to));
+            }
+            default -> System.out.println("Ogiltigt filter: \"" + choice + "\".");
+        }
+    }
+
     //Formatting
+    private void printTransactions(List<Transaction> transactions) {
+        if (transactions.isEmpty()) {
+            System.out.println("Inga transaktioner att visa.");
+            return;
+        }
+        for (Transaction t : transactions) {
+            System.out.println(format(t));
+        }
+        System.out.println("(" + transactions.size() + " st)");
+    }
+
     private String format(Transaction t) {
-        return t.date() + "  " + t.type().getDisplayName() + "  " + t.category()
-                + "  " + formatAmount(t.signedAmount()) + " kr";
+        return String.format("%s  %-7s  %-15s %12s kr",
+                t.date(), t.type().getDisplayName(), t.category(), formatAmount(t.signedAmount()));
     }
 
     private String formatAmount(BigDecimal amount) {
@@ -108,9 +163,9 @@ public class ConsoleMenu {
         }
     }
 
-    private LocalDate readDate() {
+    private LocalDate readDate(String prompt) {
         while (true) {
-            String input = readRequired("Datum (ÅÅÅÅ-MM-DD, tom rad = idag): ");
+            String input = readRequired(prompt);
             if (input.isEmpty()) {
                 return LocalDate.now();
             }
