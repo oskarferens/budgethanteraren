@@ -1,13 +1,32 @@
 <configuration>
 
+    <!-- Console: only errors, so log lines do not mix with the menu -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
         <encoder>
             <pattern>%-5level %logger{0} - %msg%n</pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
 
+    <!-- File: everything from DEBUG and up, with date and time -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>budget.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{0} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Our own code logs from DEBUG, libraries only from INFO -->
+    <logger name="org.example" level="DEBUG"/>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </root>
 
 </configuration>
