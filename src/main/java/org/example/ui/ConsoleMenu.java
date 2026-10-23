@@ -1,6 +1,8 @@
 package org.example.ui;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -11,6 +13,7 @@ import org.example.exception.InvalidTransactionException;
 import org.example.model.Transaction;
 import org.example.model.TransactionType;
 import org.example.service.BudgetService;
+import org.example.storage.TransactionFileStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,10 +26,14 @@ public class ConsoleMenu {
     private static final Logger log = LoggerFactory.getLogger(ConsoleMenu.class);
 
     private final BudgetService service;
+    private final TransactionFileStorage storage;
+    private final Path dataFile;
     private final Scanner scanner;
 
-    public ConsoleMenu(BudgetService service, Scanner scanner) {
+    public ConsoleMenu(BudgetService service, TransactionFileStorage storage, Path dataFile, Scanner scanner) {
         this.service = service;
+        this.storage = storage;
+        this.dataFile = dataFile;
         this.scanner = scanner;
     }
 
@@ -44,6 +51,7 @@ public class ConsoleMenu {
                     case "2" -> showAllTransactions();
                     case "3" -> showSummary();
                     case "4" -> filterTransactions();
+                    case "5" -> saveToFile();
                     case "e" -> running = false;
                     default -> System.out.println("Ogiltigt val: \"" + choice + "\". Försök igen.");
                 }
@@ -52,7 +60,6 @@ public class ConsoleMenu {
                 System.out.println("Fel: " + e.getMessage());
             }
         }
-        System.out.println("Hejdå!");
     }
 
     private void printMenu() {
@@ -62,6 +69,7 @@ public class ConsoleMenu {
         System.out.println("2. Visa alla transaktioner");
         System.out.println("3. Visa saldo och sammanställning per kategori");
         System.out.println("4. Filtrera transaktioner");
+        System.out.println("5. Spara till fil");
         System.out.println("e. Avsluta");
     }
 
@@ -113,6 +121,18 @@ public class ConsoleMenu {
         }
     }
 
+    /** Saves all transactions to the data file. Also called by Main when the program ends. */
+    public void saveToFile() {
+        try {
+            storage.save(dataFile, service.getAllSortedByDate());
+            System.out.println("Sparade " + service.getAllTransactions().size()
+                    + " transaktioner till " + dataFile + ".");
+        } catch (IOException e) {
+            log.error("Could not save transactions to {}", dataFile, e);
+            System.out.println("Kunde inte spara till filen " + dataFile + ": " + e.getMessage());
+        }
+    }
+
     //Formatting
     private void printTransactions(List<Transaction> transactions) {
         if (transactions.isEmpty()) {
@@ -133,7 +153,6 @@ public class ConsoleMenu {
     private String formatAmount(BigDecimal amount) {
         return (amount.signum() > 0 ? "+" : "") + amount.toPlainString();
     }
-
     //Safe input
     /** Returns the trimmed line, or null if there is no more input. */
     private String readLine(String prompt) {
