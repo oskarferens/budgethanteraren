@@ -1,11 +1,20 @@
 package org.example.storage;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.example.exception.FileFormatException;
 import org.example.model.Transaction;
 import org.example.model.TransactionType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Reads and writes transactions as CSV lines,
@@ -14,9 +23,56 @@ import org.example.model.TransactionType;
  */
 public class TransactionFileStorage {
 
+    private static final Logger log = LoggerFactory.getLogger(TransactionFileStorage.class);
+
     static final String HEADER = "date;category;amount;type";
     private static final String SEPARATOR = ";";
     private static final int FIELD_COUNT = 4;
+
+    /**
+     * Reads all transactions from the file.
+     * If the file does not exist, a new empty file is created.
+     * Broken lines are skipped and logged, so one bad line does not stop the program.
+     */
+    public List<Transaction> load(Path file) throws IOException {
+        if (Files.notExists(file)) {
+            log.info("File {} not found, creating a new empty file", file);
+            createEmptyFile(file);
+            return new ArrayList<>();
+        }
+
+        List<Transaction> transactions = new ArrayList<>();
+        int skipped = 0;
+
+        try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            String line;
+            int lineNumber = 0;
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                if (line.isBlank() || (lineNumber == 1 && line.trim().equals(HEADER))) {
+                    continue;
+                }
+                try {
+                    transactions.add(parseLine(line, lineNumber));
+                } catch (FileFormatException e) {
+                    skipped++;
+                    log.warn("Skipping broken line in {}: {}", file, e.getMessage());
+                }
+            }
+        }
+
+        log.info("Loaded {} transactions from {} ({} broken lines skipped)",
+                transactions.size(), file, skipped);
+        return transactions;
+    }
+
+    private void createEmptyFile(Path file) throws IOException {
+        Path parent = file.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        Files.writeString(file, HEADER + System.lineSeparator(), StandardCharsets.UTF_8);
+    }
 
     /** Turns one transaction into one CSV line. */
     String toCsvLine(Transaction transaction) {
