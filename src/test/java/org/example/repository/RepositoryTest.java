@@ -34,10 +34,10 @@ class RepositoryTest {
     @Test
     @DisplayName("A new repository is empty")
     void newRepositoryIsEmpty() {
-        // Act
+        // Given
         List<Transaction> all = repository.findAll();
 
-        // Assert
+        // Then
         assertTrue(repository.isEmpty());
         assertEquals(0, repository.size());
         assertTrue(all.isEmpty());
@@ -46,14 +46,14 @@ class RepositoryTest {
     @Test
     @DisplayName("Added items are returned by findAll in the same order")
     void addStoresItemsInOrder() {
-        // Arrange
+        // Given
         repository.add(salary);
         repository.add(rent);
 
-        // Act
+        // When
         List<Transaction> all = repository.findAll();
 
-        // Assert
+        // Then
         assertEquals(2, repository.size());
         assertFalse(repository.isEmpty());
         assertEquals(List.of(salary, rent), all);
@@ -62,11 +62,11 @@ class RepositoryTest {
     @Test
     @DisplayName("findAll returns a read only list")
     void findAllReturnsReadOnlyList() {
-        // Arrange
+        // Given
         repository.add(salary);
         List<Transaction> all = repository.findAll();
 
-        // Act + Assert
+        // When + Then
         assertThrows(UnsupportedOperationException.class, () -> all.add(rent));
         assertEquals(1, repository.size());
     }
@@ -74,14 +74,14 @@ class RepositoryTest {
     @Test
     @DisplayName("findAll returns a copy that does not change when the repository changes")
     void findAllReturnsCopy() {
-        // Arrange
+        // Given
         repository.add(salary);
         List<Transaction> before = repository.findAll();
 
-        // Act
+        // When
         repository.add(rent);
 
-        // Assert
+        // Then
         assertEquals(1, before.size());
         assertEquals(2, repository.size());
     }
@@ -89,7 +89,7 @@ class RepositoryTest {
     @Test
     @DisplayName("Adding null is not allowed")
     void addNullThrows() {
-        // Act + Assert
+        // When + Then
         assertThrows(NullPointerException.class, () -> repository.add(null));
         assertTrue(repository.isEmpty());
     }
@@ -97,39 +97,39 @@ class RepositoryTest {
     @Test
     @DisplayName("findWhere returns only the items that match the condition")
     void findWhereReturnsMatchingItems() {
-        // Arrange
+        // Given
         repository.add(salary);
         repository.add(rent);
         repository.add(food);
 
-        // Act
+        // When
         List<Transaction> expenses = repository.findWhere(t -> t.type() == TransactionType.EXPENSE);
 
-        // Assert
+        // Then
         assertEquals(List.of(rent, food), expenses);
     }
 
     @Test
     @DisplayName("findWhere returns an empty list when nothing matches")
     void findWhereWithNoMatchReturnsEmptyList() {
-        // Arrange
+        // Given
         repository.add(rent);
         repository.add(food);
 
-        // Act
+        // When
         List<Transaction> incomes = repository.findWhere(t -> t.type() == TransactionType.INCOME);
 
-        // Assert
+        // Then
         assertTrue(incomes.isEmpty());
     }
 
     @Test
     @DisplayName("findWhere on an empty repository returns an empty list")
     void findWhereOnEmptyRepositoryReturnsEmptyList() {
-        // Act
+        // Given
         List<Transaction> result = repository.findWhere(t -> true);
 
-        // Assert
+        // Then
         assertTrue(result.isEmpty());
     }
 
@@ -142,16 +142,16 @@ class RepositoryTest {
     @Test
     @DisplayName("The repository is generic and works with other types too")
     void worksWithOtherTypes() {
-        // Arrange
+        // Given
         Repository<String> categories = new Repository<>();
         categories.add("Mat");
         categories.add("Hyra");
         categories.add("Nöje");
 
-        // Act
+        // When
         List<String> startingWithM = categories.findWhere(c -> c.startsWith("M"));
 
-        // Assert
+        // Then
         assertEquals(List.of("Mat"), startingWithM);
         assertEquals(3, categories.size());
     }
