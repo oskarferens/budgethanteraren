@@ -18,6 +18,7 @@ public class Main {
     private static final Path DATA_FILE = Path.of("transactions.csv");
 
     static void main() {
+        log.info("Budgethanteraren started");
         Repository<Transaction> repository = new Repository<>();
         BudgetService service = new BudgetService(repository);
         TransactionFileStorage storage = new TransactionFileStorage();
@@ -31,9 +32,11 @@ public class Main {
             menu.saveToFile();
         } else {
             // Do not overwrite a file we could not read - the user would lose the old data.
+            log.warn("Auto-save skipped because {} could not be read at startup", DATA_FILE);
             System.out.println("Automatisk sparning hoppades över för att det gick inte att läsas filen vid start.");
         }
         System.out.println("Hejdå!");
+        log.info("Budgethanteraren stopped");
     }
 
     /** Loads saved transactions. Returns false if the file could not be read. */
