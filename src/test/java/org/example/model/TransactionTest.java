@@ -63,6 +63,20 @@ class TransactionTest {
     }
 
     @Test
+    @DisplayName("Category gets the same upper or lower case format")
+    void categoryCaseIsNormalized() {
+        // Arrange + Act
+        Transaction lower = new Transaction(DATE, "mat", new BigDecimal("10"), TransactionType.EXPENSE);
+        Transaction upper = new Transaction(DATE, "MAT", new BigDecimal("10"), TransactionType.EXPENSE);
+        Transaction swedish = new Transaction(DATE, "öVRIGT", new BigDecimal("10"), TransactionType.EXPENSE);
+
+        // Assert
+        assertEquals("Mat", lower.category());
+        assertEquals("Mat", upper.category());
+        assertEquals("Övrigt", swedish.category());
+    }
+
+    @Test
     @DisplayName("Smallest positive amount (0.01) is accepted")
     void smallestPositiveAmountIsAccepted() {
         // Given + When
