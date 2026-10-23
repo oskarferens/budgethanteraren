@@ -2,7 +2,10 @@ package org.example.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.example.model.Transaction;
 import org.example.model.TransactionType;
@@ -44,6 +47,18 @@ public class BudgetService {
         return repository.findAll().stream()
                 .map(Transaction::signedAmount)
                 .reduce(ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Sum per category -Hyra = -8000.00, Lön = 25000.00, Mat =  -450.50-.
+     * Income is positive and expenses are negative. TreeMap keeps the categories sorted A-Z.
+     */
+    public Map<String, BigDecimal> getSumPerCategory() {
+        return repository.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        Transaction::category,
+                        TreeMap::new,
+                        Collectors.reducing(ZERO, Transaction::signedAmount, BigDecimal::add)));
     }
 
     private BigDecimal sumOf(List<Transaction> transactions) {
